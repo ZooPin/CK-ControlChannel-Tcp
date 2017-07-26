@@ -5,21 +5,32 @@ using CK.ControlChannel.Abstractions;
 
 namespace CK.ControlChannel.TcpServer
 {
-    public class ControlChannelServer : IControlChannelServer
+    public class ControlChannelServer : IControlChannelServer, IDisposable
     {
-        public string Host => throw new NotImplementedException();
+        private readonly string _host;
+        private readonly int _port;
+        private readonly List<TcpServerClientSession> _activeSessions = new List<TcpServerClientSession>();
 
-        public int Port => throw new NotImplementedException();
+        public ControlChannelServer( string host, int port )
+        {
+            _host = host;
+            _port = port;
+        }
 
-        public bool IsSecure => throw new NotImplementedException();
+        public string Host => _host;
 
-        public bool IsOpen => throw new NotImplementedException();
+        public int Port => _port;
 
-        public IEnumerable<IServerClientSession> ActiveSessions => throw new NotImplementedException();
+        public bool IsSecure => false;
+
+        public bool IsOpen => false;
+
+        public bool IsDisposed { get; private set; }
+
+        public IEnumerable<IServerClientSession> ActiveSessions => _activeSessions;
 
         public void Close()
         {
-            throw new NotImplementedException();
         }
 
         public void Open()
@@ -31,5 +42,25 @@ namespace CK.ControlChannel.TcpServer
         {
             throw new NotImplementedException();
         }
+
+        #region IDisposable Support
+
+        protected virtual void Dispose( bool disposing )
+        {
+            if( !IsDisposed )
+            {
+                if( disposing )
+                {
+                    Close();
+                }
+                IsDisposed = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose( true );
+        }
+        #endregion
     }
 }
