@@ -1,0 +1,59 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.16
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution items", "Solution items", "{409E7C8D-215E-4613-8971-A091F1755F44}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitignore = .gitignore
+		appveyor.yml = appveyor.yml
+		CONTRIBUTING.md = CONTRIBUTING.md
+		LICENSE.md = LICENSE.md
+		NuGet.config = NuGet.config
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CodeCakeBuilder", "CodeCakeBuilder", "{F44991BA-F033-4576-923E-DDAFA06E6659}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeCakeBuilder", "CodeCakeBuilder\CodeCakeBuilder.csproj", "{FD4817B6-3CD7-4E74-AA10-7CA95FDFCF2D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.ControlChannel.TcpServer", "CK.ControlChannel.TcpServer\CK.ControlChannel.TcpServer.csproj", "{9B256F53-B2F5-4ED2-967E-CDC2832D74E7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.ControlChannel.TcpClient", "CK.ControlChannel.TcpClient\CK.ControlChannel.TcpClient.csproj", "{A5C3A5AF-6EF2-4317-9FE7-83F4DFDB22B8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{DB0DBBEF-1D63-4825-829E-C36C537D66C7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CK.ControlChannel.Tcp.Tests", "Tests\CK.ControlChannel.Tcp.Tests\CK.ControlChannel.Tcp.Tests.csproj", "{EEB44EA2-FFCB-4B85-902A-30D5DC397795}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FD4817B6-3CD7-4E74-AA10-7CA95FDFCF2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD4817B6-3CD7-4E74-AA10-7CA95FDFCF2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD4817B6-3CD7-4E74-AA10-7CA95FDFCF2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD4817B6-3CD7-4E74-AA10-7CA95FDFCF2D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B256F53-B2F5-4ED2-967E-CDC2832D74E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B256F53-B2F5-4ED2-967E-CDC2832D74E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B256F53-B2F5-4ED2-967E-CDC2832D74E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B256F53-B2F5-4ED2-967E-CDC2832D74E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5C3A5AF-6EF2-4317-9FE7-83F4DFDB22B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5C3A5AF-6EF2-4317-9FE7-83F4DFDB22B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5C3A5AF-6EF2-4317-9FE7-83F4DFDB22B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5C3A5AF-6EF2-4317-9FE7-83F4DFDB22B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EEB44EA2-FFCB-4B85-902A-30D5DC397795}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EEB44EA2-FFCB-4B85-902A-30D5DC397795}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EEB44EA2-FFCB-4B85-902A-30D5DC397795}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EEB44EA2-FFCB-4B85-902A-30D5DC397795}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{FD4817B6-3CD7-4E74-AA10-7CA95FDFCF2D} = {F44991BA-F033-4576-923E-DDAFA06E6659}
+		{EEB44EA2-FFCB-4B85-902A-30D5DC397795} = {DB0DBBEF-1D63-4825-829E-C36C537D66C7}
+	EndGlobalSection
+EndGlobal
