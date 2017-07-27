@@ -17,19 +17,22 @@ namespace CK.ControlChannel.Tcp
     {
         private readonly string _host;
         private readonly int _port;
-        private readonly List<TcpServerClientSession> _activeSessions = new List<TcpServerClientSession>();
         private readonly X509Certificate2 _serverCertificate;
+        private readonly IAuthorizationHandler _authHandler;
+        private readonly List<TcpServerClientSession> _activeSessions = new List<TcpServerClientSession>();
         private readonly ManualResetEvent _connectEvent = new ManualResetEvent( false );
+        private readonly Dictionary<string, ServerChannelDataHandler> _channelHandlers = new Dictionary<string, ServerChannelDataHandler>();
         private CancellationTokenSource _cts;
         private TcpListener _tcpListener;
         private Task _listenTask;
         private IPEndPoint _ep;
         private bool _isOpen;
 
-        public ControlChannelServer( string host, int port, X509Certificate2 serverCertificate = null )
+        public ControlChannelServer( string host, int port, IAuthorizationHandler authHandler, X509Certificate2 serverCertificate = null )
         {
             _host = host;
             _port = port;
+            _authHandler = authHandler;
             _serverCertificate = serverCertificate;
         }
 
@@ -133,21 +136,107 @@ namespace CK.ControlChannel.Tcp
 
         private async Task HandleClientStreamAsync( IActivityMonitor m, Stream s, TcpClient c )
         {
-            var version = await ReadProtocolVersionAsync( s );
-            if( version != ProtocolVersion )
+            TcpServerClientSession session = null;
+            try
             {
-                m.Error( $"Client gave version {version}, but current version is {ProtocolVersion}" );
-                // Stream will be disposed in AcceptClientAsync
+                var version = s.ReadByte();
+                if( version != ProtocolVersion )
+                {
+                    m.Error( $"Client gave version {version}, but current version is {ProtocolVersion}" );
+                    // Stream will be disposed in AcceptClientAsync
+                }
+                else
+                {
+                    m.Debug( () => $"Using version {version}" );
+
+                    var authData = s.ReadControl();
+
+                    IPEndPoint ep = c.Client.RemoteEndPoint as IPEndPoint;
+                    string ip;
+                    if( ep != null )
+                    {
+                        ip = ep.ToString();
+                    }
+                    else
+                    {
+                        ip = c.Client.RemoteEndPoint.Serialize().ToString();
+                    }
+
+                    session = new TcpServerClientSession(
+                        c,
+                        Guid.NewGuid().ToString(),
+                        ip,
+                        authData,
+                        s );
+
+                    if( _authHandler.OnAuthorizeSession( session ) )
+                    {
+                        session.IsAuthenticated = true;
+                        Dictionary<string, string> authOk = new Dictionary<string, string>()
+                        {
+                            [ControlMessage.TypeKey] = "AuthOk"
+                        };
+                        s.WriteControl( authOk );
+                        _activeSessions.Add( session );
+                        try
+                        {
+                            await HandleClientMessage( m, session );
+                        }
+                        finally
+                        {
+                            _activeSessions.Remove( session );
+                        }
+                    }
+                    else
+                    {
+                        Dictionary<string, string> authFail = new Dictionary<string, string>()
+                        {
+                            [ControlMessage.TypeKey] = "AuthFail"
+                        };
+                        s.WriteControl( authFail );
+                    }
+                }
+
+
             }
-            else
+            catch( Exception ex )
             {
-                m.Debug( () => $"Using version {version}" );
+                m.Error( ex );
             }
+        }
+
+        private Task HandleClientMessage( IActivityMonitor m, TcpServerClientSession session )
+        {
+            bool quit = false;
+            while( !quit )
+            {
+                byte header = (byte)session.Stream.ReadByte();
+                switch( header )
+                {
+                    case ControlChannelServer.H_MSG:
+                        string channel = session.Stream.ReadString( Encoding.UTF8 );
+                        int len = session.Stream.ReadInt32();
+                        byte[] data = session.Stream.ReadBuffer( len );
+                        ServerChannelDataHandler h;
+                        if( _channelHandlers.TryGetValue( channel, out h ) )
+                        {
+                            h( m, data, session );
+                        }
+                        break;
+                    case ControlChannelServer.H_BYE:
+                    default:
+                        // Bye
+                        session.Stream.WriteByte( ControlChannelServer.H_BYE );
+                        quit = true;
+                        break;
+                }
+            }
+            return Task.FromResult( 0 );
         }
 
         public void RegisterChannelHandler( string channelName, ServerChannelDataHandler handler )
         {
-            throw new NotImplementedException();
+            _channelHandlers[channelName] = handler;
         }
 
         #region IDisposable Support
