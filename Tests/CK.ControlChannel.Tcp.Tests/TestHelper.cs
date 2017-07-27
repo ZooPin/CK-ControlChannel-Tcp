@@ -74,5 +74,22 @@ namespace CK.ControlChannel.Tcp.Tests
         {
             return @this.ConnectAsync( s.Host, s.Port );
         }
+        public static async Task<Stream> GetDataStreamAsync( this TcpClient @this, ControlChannelServer s )
+        {
+            if( s.IsSecure )
+            {
+                var ssl = new SslStream( @this.GetStream(), false, TestHelper.ServerCertificateValidationCallback );
+                await ssl.AuthenticateAsClientAsync( s.Host );
+                return ssl;
+            }
+            else
+            {
+                return @this.GetStream();
+            }
+        }
+        public static async Task WriteProtocolVersion( this Stream @this )
+        {
+
+        }
     }
 }

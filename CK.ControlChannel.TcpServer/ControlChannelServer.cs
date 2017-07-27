@@ -8,10 +8,12 @@ using System.Net;
 using System.Threading.Tasks;
 using System.Threading;
 using CK.Core;
+using System.Net.Security;
+using System.IO;
 
 namespace CK.ControlChannel.Tcp
 {
-    public class ControlChannelServer : IControlChannelServer, IDisposable
+    public partial class ControlChannelServer : IControlChannelServer, IDisposable
     {
         private readonly string _host;
         private readonly int _port;
@@ -78,7 +80,7 @@ namespace CK.ControlChannel.Tcp
                 while( !token.IsCancellationRequested )
                 {
                     TcpClient c = await _tcpListener.AcceptTcpClientAsync();
-                    TcpServerClientSession s = new TcpServerClientSession( c );
+                    var clientTask = Task.Factory.StartNew( () => AcceptClientAsync( c ), _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default ).Unwrap();
                 }
 
             }
@@ -90,6 +92,56 @@ namespace CK.ControlChannel.Tcp
             {
                 m.Error( "Closing TcpListener following error", ex );
                 Close();
+            }
+        }
+
+        private async Task AcceptClientAsync( TcpClient c )
+        {
+            IActivityMonitor m = new ActivityMonitor();
+            m.Debug( () =>
+            {
+                IPEndPoint ep = c.Client.RemoteEndPoint as IPEndPoint;
+                string ip;
+                if( ep != null )
+                {
+                    ip = ep.ToString();
+                }
+                else
+                {
+                    ip = c.Client.RemoteEndPoint.Serialize().ToString();
+                }
+                return $"Opening connection from {ip}";
+            } );
+            using( NetworkStream ns = c.GetStream() )
+            {
+                if( _serverCertificate != null )
+                {
+                    using( SslStream ssl = new SslStream( ns, false ) )
+                    {
+                        m.Debug( () => "Using SSL stream" );
+                        await ssl.AuthenticateAsServerAsync( _serverCertificate );
+                        await HandleClientStreamAsync( m, ssl, c );
+                    }
+                }
+                else
+                {
+                    m.Warn( "Using unencrypted stream" );
+                    await HandleClientStreamAsync( m, ns, c );
+                }
+            }
+        }
+
+        private async Task HandleClientStreamAsync( IActivityMonitor m, Stream s, TcpClient c )
+        {
+            var version = await ReadProtocolVersionAsync( s );
+            if( version != ProtocolVersion )
+            {
+                m.Error( $"Client gave version {version}, but current version is {ProtocolVersion}" );
+                // Stream will be disposed in AcceptClientAsync
+            }
+            else
+            {
+                m.Debug( () => $"Using version {version}" );
             }
         }
 

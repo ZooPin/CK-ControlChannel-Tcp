@@ -2,6 +2,7 @@
 using FluentAssertions;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -110,11 +111,13 @@ namespace CK.ControlChannel.Tcp.Tests
             using( ControlChannelServer s = TestHelper.CreateDefaultServer() )
             {
                 s.Open();
-                s.IsOpen.Should().BeTrue();
                 using( var c = TestHelper.CreateTcpClient() )
                 {
                     await c.ConnectAsync( s );
-
+                    using( Stream st = await c.GetDataStreamAsync( s ) )
+                    {
+                        await st.WriteProtocolVersion();
+                    }
                 }
             }
         }

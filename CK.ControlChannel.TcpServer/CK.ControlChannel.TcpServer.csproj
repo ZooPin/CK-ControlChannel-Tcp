@@ -10,6 +10,7 @@
     <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="8.0.0" />
     <PackageReference Include="CK.ControlChannel.Abstractions" Version="0.0.0-a01-00-develop-0003" />
     <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
+    <PackageReference Include="System.Net.Security" Version="4.3.1" />
   </ItemGroup>
 
 </Project>
