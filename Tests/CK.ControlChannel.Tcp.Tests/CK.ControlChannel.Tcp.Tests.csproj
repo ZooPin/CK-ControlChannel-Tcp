@@ -5,6 +5,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="CK.ControlChannel.Tcp.Tests.pfx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="CK.ControlChannel.Tcp.Tests.pfx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="CK.Monitoring" Version="7.0.0" />
     <PackageReference Include="FluentAssertions" Version="4.19.3" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
