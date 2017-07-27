@@ -1,16 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Sockets;
 using CK.ControlChannel.Abstractions;
+using System.Diagnostics;
 
-namespace CK.ControlChannel.TcpServer
+namespace CK.ControlChannel.Tcp
 {
     internal class TcpServerClientSession : IServerClientSession
     {
+        private readonly TcpClient _tcpClient;
+
         private string _sessionId;
         private string _clientName;
         private bool _isConnected;
         private bool _isAuthenticated;
         private Dictionary<string, string> _clientData;
+
+        internal TcpServerClientSession( TcpClient tcpClient )
+        {
+            Debug.Assert( tcpClient != null );
+            _tcpClient = tcpClient;
+        }
 
         public string SessionId => _sessionId;
 
@@ -26,5 +36,7 @@ namespace CK.ControlChannel.TcpServer
         {
             throw new NotImplementedException();
         }
+
+        internal TcpClient TcpClient => _tcpClient;
     }
 }

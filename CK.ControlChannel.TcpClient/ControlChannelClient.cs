@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace CK.ControlChannel.TcpClient
+namespace CK.ControlChannel.Tcp
 {
     public class ControlChannelClient : IControlChannelClient
     {
