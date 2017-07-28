@@ -1,4 +1,4 @@
-using CK.ControlChannel.Abstractions;
+﻿using CK.ControlChannel.Abstractions;
 using CK.ControlChannel.Tcp;
 using CK.Core;
 using FluentAssertions;
@@ -238,6 +238,214 @@ namespace CK.ControlChannel.Tcp.Tests
         }
 
         [Fact]
+        public async Task server_data_length_error()
+        {
+            using( var c = await TestServerWithTcpClient.Create() )
+            {
+                var s = c.Stream;
+
+                // Register client -> server channel
+                s.WriteByte( Protocol.M_PUB_TOPIC );
+                s.WriteString( "test", Protocol.TextEncoding );
+                ushort testChannelId = s.ReadUInt16();
+
+                // Send data
+                byte[] data = new byte[] { 0x00, 0x01, 0x02, 0x03 };
+                s.WriteByte( Protocol.M_MSG_PUB );
+                s.WriteUInt16( testChannelId );
+                s.WriteInt32( -1 );
+                //s.WriteBuffer( data );
+                s.ReadByte().Should().Be( Protocol.M_ERROR );
+                s.ReadString( Protocol.TextEncoding ).Should().Be( Protocol.E_INVALID_LENGTH );
+
+                // Verify disconnect
+                s.EnsureDisconnected();
+                c.Server.ActiveSessions.Should().HaveCount( 0 );
+            }
+        }
+
+        [Fact]
+        public async Task server_incoming_channel_error_after_unregistering()
+        {
+            using( var c = await TestServerWithTcpClient.Create() )
+            {
+                var s = c.Stream;
+
+                // Register client -> server channel
+                s.WriteByte( Protocol.M_PUB_TOPIC );
+                s.WriteString( "test", Protocol.TextEncoding );
+                ushort testChannelId = s.ReadUInt16();
+
+                // Send data
+                byte[] data = new byte[] { 0x00, 0x01, 0x02, 0x03 };
+                s.WriteByte( Protocol.M_MSG_PUB );
+                s.WriteUInt16( testChannelId );
+                s.WriteInt32( data.Length );
+                s.WriteBuffer( data );
+                s.ReadByte().Should().Be( Protocol.M_ACK );
+                s.ReadByte().Should().Be( Protocol.M_MSG_PUB );
+
+                // Unregister client -> server channel
+                s.WriteByte( Protocol.M_UNPUB_TOPIC );
+                s.WriteUInt16( testChannelId );
+                s.ReadByte().Should().Be( Protocol.M_ACK );
+                s.ReadByte().Should().Be( Protocol.M_UNPUB_TOPIC );
+
+                // Send data
+                data = new byte[] { 0x00, 0x01, 0x02, 0x03 };
+                s.WriteByte( Protocol.M_MSG_PUB );
+                s.WriteUInt16( testChannelId );
+                s.ReadByte().Should().Be( Protocol.M_ERROR );
+                s.ReadString( Protocol.TextEncoding ).Should().Be( Protocol.E_INVALID_CHANNEL );
+
+                // Verify disconnect
+                s.EnsureDisconnected();
+                c.Server.ActiveSessions.Should().HaveCount( 0 );
+            }
+        }
+
+        [Fact]
+        public async Task server_outgoing_test()
+        {
+            using( var c = await TestServerWithTcpClient.Create() )
+            {
+                var s = c.Stream;
+                var session = c.Server.ActiveSessions.Single();
+
+                // Register server -> client channel
+                s.WriteByte( Protocol.M_SUB_TOPIC );
+                s.WriteString( "test", Protocol.TextEncoding );
+                ushort testChannelId = s.ReadUInt16();
+
+                // Other side needs to be on other thread
+                var t = Task.Run( () => session.Send( "test", new byte[] { 0x00 } ) );
+
+                // Receive data
+                s.ReadByte().Should().Be( Protocol.M_MSG_PUB );
+                s.ReadUInt16().Should().Be( testChannelId );
+                int len = s.ReadInt32();
+                var data = await s.ReadBufferAsync( len );
+                data.ShouldAllBeEquivalentTo( new byte[] { 0x00 } );
+                s.WriteAck( Protocol.M_MSG_PUB );
+
+            }
+        }
+
+        [Fact]
+        public async Task server_incoming_channel_registration_reuses_ids()
+        {
+            using( var c = await TestServerWithTcpClient.Create() )
+            {
+                var s = c.Stream;
+
+                // Register client -> server channel
+                s.WriteByte( Protocol.M_PUB_TOPIC );
+                s.WriteString( "test", Protocol.TextEncoding );
+                ushort testChannelId = s.ReadUInt16();
+
+                testChannelId.Should().Be( 0 );
+
+                // Register client -> server channel
+                s.WriteByte( Protocol.M_PUB_TOPIC );
+                s.WriteString( "test2", Protocol.TextEncoding );
+                ushort test2ChannelId = s.ReadUInt16();
+
+                test2ChannelId.Should().Be( 1 );
+
+                // Unregister client -> server channel
+                s.WriteByte( Protocol.M_UNPUB_TOPIC );
+                s.WriteUInt16( testChannelId );
+                s.ReadByte().Should().Be( Protocol.M_ACK );
+                s.ReadByte().Should().Be( Protocol.M_UNPUB_TOPIC );
+
+                // Register client -> server channel
+                s.WriteByte( Protocol.M_PUB_TOPIC );
+                s.WriteString( "test3", Protocol.TextEncoding );
+                ushort test3ChannelId = s.ReadUInt16();
+
+                test3ChannelId.Should().Be( 0 );
+
+                // Unregister client -> server channel
+                s.WriteByte( Protocol.M_UNPUB_TOPIC );
+                s.WriteUInt16( test2ChannelId );
+                s.ReadByte().Should().Be( Protocol.M_ACK );
+                s.ReadByte().Should().Be( Protocol.M_UNPUB_TOPIC );
+
+                // Unregister client -> server channel
+                s.WriteByte( Protocol.M_UNPUB_TOPIC );
+                s.WriteUInt16( test3ChannelId );
+                s.ReadByte().Should().Be( Protocol.M_ACK );
+                s.ReadByte().Should().Be( Protocol.M_UNPUB_TOPIC );
+
+            }
+        }
+
+        [Fact]
+        public async Task server_outgoing_channel_registration_reuses_ids()
+        {
+            using( var c = await TestServerWithTcpClient.Create() )
+            {
+                var s = c.Stream;
+
+                // Register server -> client channel
+                s.WriteByte( Protocol.M_SUB_TOPIC );
+                s.WriteString( "test", Protocol.TextEncoding );
+                ushort testChannelId = s.ReadUInt16();
+
+                testChannelId.Should().Be( 0 );
+
+                // Register server -> client channel
+                s.WriteByte( Protocol.M_SUB_TOPIC );
+                s.WriteString( "test2", Protocol.TextEncoding );
+                ushort test2ChannelId = s.ReadUInt16();
+
+                test2ChannelId.Should().Be( 1 );
+
+                // Unregister server -> client channel
+                s.WriteByte( Protocol.M_UNSUB_TOPIC );
+                s.WriteUInt16( testChannelId );
+                s.ReadByte().Should().Be( Protocol.M_ACK );
+                s.ReadByte().Should().Be( Protocol.M_UNSUB_TOPIC );
+
+                // Register server -> client channel
+                s.WriteByte( Protocol.M_SUB_TOPIC );
+                s.WriteString( "test3", Protocol.TextEncoding );
+                ushort test3ChannelId = s.ReadUInt16();
+
+                test3ChannelId.Should().Be( 0 );
+
+                // Unregister server -> client channel
+                s.WriteByte( Protocol.M_UNSUB_TOPIC );
+                s.WriteUInt16( test2ChannelId );
+                s.ReadByte().Should().Be( Protocol.M_ACK );
+                s.ReadByte().Should().Be( Protocol.M_UNSUB_TOPIC );
+
+                // Unregister server -> client channel
+                s.WriteByte( Protocol.M_UNSUB_TOPIC );
+                s.WriteUInt16( test3ChannelId );
+                s.ReadByte().Should().Be( Protocol.M_ACK );
+                s.ReadByte().Should().Be( Protocol.M_UNSUB_TOPIC );
+
+            }
+        }
+
+        [Fact]
+        public async Task server_invalid_message_error()
+        {
+            using( var c = await TestServerWithTcpClient.Create() )
+            {
+                var s = c.Stream;
+                s.WriteByte( 0x72 );
+                s.ReadByte().Should().Be( Protocol.M_ERROR );
+                s.ReadString( Protocol.TextEncoding ).Should().Be( Protocol.E_INVALID_MESSAGE );
+
+                // Verify disconnect
+                s.EnsureDisconnected();
+                c.Server.ActiveSessions.Should().HaveCount( 0 );
+            }
+        }
+
+        [Fact]
         public async Task server_tcp_test()
         {
             ManualResetEvent evt = new ManualResetEvent( false );
@@ -246,67 +454,67 @@ namespace CK.ControlChannel.Tcp.Tests
                 evt.Set();
                 return true;
             } );
-            using( ControlChannelServer s = TestHelper.CreateDefaultServer( authHandler ) )
+            using( ControlChannelServer server = TestHelper.CreateDefaultServer( authHandler ) )
             {
-                s.Open();
-                s.RegisterChannelHandler( "test", ( m, data, session ) =>
+                server.Open();
+                server.RegisterChannelHandler( "test", ( m, data, session ) =>
                  {
                      data.ShouldAllBeEquivalentTo( new byte[] { 0x00, 0x01, 0x02, 0x03 } );
                      session.Send( "test-backchannel", new byte[] { 0x04, 0x05, 0x06, 0x07 } );
                      evt.Set();
                  } );
-                using( var c = TestHelper.CreateTcpClient() )
+                using( var client = TestHelper.CreateTcpClient() )
                 {
-                    await c.ConnectAsync( s );
-                    using( Stream st = await c.GetDataStreamAsync( s ) )
+                    await client.ConnectAsync( server );
+                    using( Stream s = await client.GetDataStreamAsync( server ) )
                     {
                         // Authentication
-                        st.WriteByte( Protocol.PROTOCOL_VERSION );
-                        st.WriteControl( new Dictionary<string, string>()
+                        s.WriteByte( Protocol.PROTOCOL_VERSION );
+                        s.WriteControl( new Dictionary<string, string>()
                         {
                             ["hello"] = "world",
                             ["username"] = "whatever",
                             ["password"] = "whatever",
                         } );
-                        st.ReadAck().Should().Be( Protocol.PROTOCOL_VERSION );
+                        s.ReadAck().Should().Be( Protocol.PROTOCOL_VERSION );
 
                         // Ping
-                        st.WritePing();
-                        byte r = (byte)st.ReadByte();
+                        s.WritePing();
+                        byte r = (byte)s.ReadByte();
                         r.Should().Be( Protocol.M_PING );
 
                         // Register client -> server channel
-                        st.WriteByte( Protocol.M_PUB_TOPIC );
-                        st.WriteString( "test", Protocol.TextEncoding );
-                        ushort testChannelId = st.ReadUInt16();
+                        s.WriteByte( Protocol.M_PUB_TOPIC );
+                        s.WriteString( "test", Protocol.TextEncoding );
+                        ushort testChannelId = s.ReadUInt16();
 
                         // Register server -> client channel
-                        st.WriteByte( Protocol.M_SUB_TOPIC );
-                        st.WriteString( "test-backchannel", Protocol.TextEncoding );
-                        ushort testBackchannelChannelId = st.ReadUInt16();
+                        s.WriteByte( Protocol.M_SUB_TOPIC );
+                        s.WriteString( "test-backchannel", Protocol.TextEncoding );
+                        ushort testBackchannelChannelId = s.ReadUInt16();
 
                         // Send data
                         byte[] data = new byte[] { 0x00, 0x01, 0x02, 0x03 };
-                        st.WriteByte( Protocol.M_MSG_PUB );
-                        st.WriteUInt16( testChannelId );
-                        st.WriteInt32( data.Length );
-                        st.WriteBuffer( data );
-                        st.ReadAck().Should().Be( Protocol.M_MSG_PUB );
+                        s.WriteByte( Protocol.M_MSG_PUB );
+                        s.WriteUInt16( testChannelId );
+                        s.WriteInt32( data.Length );
+                        s.WriteBuffer( data );
+                        s.ReadAck().Should().Be( Protocol.M_MSG_PUB );
 
-                        // Peceive data
-                        st.ReadByte().Should().Be( Protocol.M_MSG_PUB );
-                        st.ReadUInt16().Should().Be( testBackchannelChannelId );
-                        int len = st.ReadInt32();
-                        data = await st.ReadBufferAsync( len );
+                        // Receive data
+                        s.ReadByte().Should().Be( Protocol.M_MSG_PUB );
+                        s.ReadUInt16().Should().Be( testBackchannelChannelId );
+                        int len = s.ReadInt32();
+                        data = await s.ReadBufferAsync( len );
                         data.ShouldAllBeEquivalentTo( new byte[] { 0x04, 0x05, 0x06, 0x07 } );
-                        st.WriteAck( Protocol.M_MSG_PUB );
+                        s.WriteAck( Protocol.M_MSG_PUB );
 
                         // Bye
-                        st.WriteBye();
-                        r = (byte)st.ReadByte();
+                        s.WriteBye();
+                        r = (byte)s.ReadByte();
                         r.Should().Be( Protocol.M_BYE );
 
-                        st.EnsureDisconnected();
+                        s.EnsureDisconnected();
                     }
                 }
             }
@@ -317,13 +525,17 @@ namespace CK.ControlChannel.Tcp.Tests
         {
             using( var server = TestHelper.CreateDefaultServer() )
             {
+                server.RegisterChannelHandler( "ping", ( m, data, ctx ) =>
+                {
+                    m.Debug( "Pong!!" );
+                    ctx.Send( "pong", new byte[] { 0x02 } );
+                } );
                 server.Open();
                 List<Task> clientTasks = new List<Task>();
                 for( int i = 0; i < Environment.ProcessorCount; i++ )
                 {
                     clientTasks.Add( Task.Factory.StartNew( async () =>
                     {
-
                         var m = new ActivityMonitor();
                         using( var client = TestHelper.CreateTcpClient() )
                         {
@@ -335,6 +547,37 @@ namespace CK.ControlChannel.Tcp.Tests
                                 m.Debug( "Ping!" );
                                 s.WritePing();
                                 s.ReadByte().Should().Be( Protocol.M_PING );
+
+                                s.WriteByte( Protocol.M_PUB_TOPIC );
+                                s.WriteString( "ping", Protocol.TextEncoding );
+                                ushort pingChanId = s.ReadUInt16();
+
+                                s.WriteByte( Protocol.M_SUB_TOPIC );
+                                s.WriteString( "pong", Protocol.TextEncoding );
+                                ushort pongChanId = s.ReadUInt16();
+
+                                m.Debug( "Ping!!" );
+                                s.WriteByte( Protocol.M_MSG_PUB );
+                                s.WriteUInt16( pingChanId );
+                                var data = new byte[] { 0x02 };
+                                s.WriteInt32( data.Length );
+                                s.WriteBuffer( data );
+                                s.ReadAck().Should().Be( Protocol.M_MSG_PUB );
+
+                                // Receive data
+                                s.ReadByte().Should().Be( Protocol.M_MSG_PUB );
+                                s.ReadUInt16().Should().Be( pongChanId );
+                                int len = s.ReadInt32();
+                                data = await s.ReadBufferAsync( len );
+                                s.WriteAck( Protocol.M_MSG_PUB );
+
+                                s.WriteByte( Protocol.M_UNPUB_TOPIC );
+                                s.WriteUInt16( pingChanId );
+                                s.ReadAck().Should().Be( Protocol.M_UNPUB_TOPIC );
+
+                                s.WriteByte( Protocol.M_UNSUB_TOPIC );
+                                s.WriteUInt16( pongChanId );
+                                s.ReadAck().Should().Be( Protocol.M_UNSUB_TOPIC );
                             }
                         }
 
