@@ -1,4 +1,4 @@
-﻿using CK.ControlChannel.Abstractions;
+using CK.ControlChannel.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,6 +9,19 @@ namespace CK.ControlChannel.Tcp
 {
     public static class StreamExtensions
     {
+        public static byte ReadAck( this Stream @this )
+        {
+            byte ack = (byte)@this.ReadByte();
+            if( ack != Protocol.M_ACK ) { throw new ControlChannelException( $"Expected {Protocol.M_ACK} but got {ack} instead" ); }
+            return (byte)@this.ReadByte();
+        }
+
+        public static void EnsureAck( this Stream @this, byte expected )
+        {
+            byte messageHeader = (byte)@this.ReadAck();
+            if( messageHeader != expected ) { throw new ControlChannelException( $"Expected {expected} but got {messageHeader} instead" ); }
+        }
+
         public static int ReadInt32( this Stream @this )
         {
             return BitConverter.ToInt32( @this.ReadBuffer( 4 ), 0 );
@@ -80,6 +93,7 @@ namespace CK.ControlChannel.Tcp
 
             return buffer;
         }
+
         public static void WriteBuffer( this Stream @this, byte[] buffer )
         {
             @this.Write( buffer, 0, buffer.Length );
@@ -95,12 +109,21 @@ namespace CK.ControlChannel.Tcp
             byte[] buffer = @this.ReadBuffer( len );
             return ControlMessage.DeserializeControlMessage( buffer );
         }
-
         public static void WriteControl( this Stream @this, IReadOnlyDictionary<string, string> data )
         {
             byte[] buffer = ControlMessage.SerializeControlMessage( data );
             @this.WriteInt32( buffer.Length );
             @this.WriteBuffer( buffer );
+        }
+
+        public static ushort ReadUInt16( this Stream @this )
+        {
+            byte[] buffer = @this.ReadBuffer( 2 );
+            return BitConverter.ToUInt16( buffer, 0 );
+        }
+        public static void WriteUInt16( this Stream @this, ushort i )
+        {
+            @this.WriteBuffer( BitConverter.GetBytes( i ) );
         }
     }
 }

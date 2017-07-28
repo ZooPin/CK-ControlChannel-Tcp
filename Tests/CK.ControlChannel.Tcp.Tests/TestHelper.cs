@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Net.Security;
@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using CK.ControlChannel.Abstractions;
 using CK.Core;
 using System.Text;
+using FluentAssertions;
 
 namespace CK.ControlChannel.Tcp.Tests
 {
@@ -28,7 +29,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 if( _serverCertificate == null )
                 {
                     var file = FindFirstFileInParentDirectories( "CK.ControlChannel.Tcp.Tests.pfx" );
-                    return new X509Certificate2( file );
+                    _serverCertificate = new X509Certificate2( file );
                 }
                 return _serverCertificate;
             }
@@ -107,32 +108,65 @@ namespace CK.ControlChannel.Tcp.Tests
             }
             return writeStream;
         }
-        public static void WriteProtocolVersion( this Stream @this )
+        public static void WriteDummyAuth( this Stream s )
         {
-            @this.WriteByte( ControlChannelServer.ProtocolVersion );
-        }
-        public static void WriteAuthentication( this Stream @this )
-        {
-            Dictionary<string, string> data = new Dictionary<string, string>()
+            s.WriteByte( Protocol.PROTOCOL_VERSION );
+            s.WriteControl( new Dictionary<string, string>()
             {
-                [ControlMessage.TypeKey] = "Auth",
-                ["Test"] = "Test",
-            };
-            WriteControl( @this, data );
+                ["hello"] = "world",
+            } );
+            s.ReadAck().Should().Be( Protocol.PROTOCOL_VERSION );
         }
 
-        public static IReadOnlyDictionary<string, string> ReadControl( this Stream s )
+        public static void EnsureDisconnected( this Stream s )
         {
-            int len = s.ReadInt32();
-            byte[] buffer = s.ReadBuffer( len );
-            return ControlMessage.DeserializeControlMessage( buffer );
+            try
+            {
+                s.ReadByte().Should().Be( -1 );
+            }
+            catch( IOException soe )
+            {
+                soe.InnerException.Should().BeOfType<SocketException>();
+            }
+        }
+    }
+
+    internal class TestServerWithTcpClient : IDisposable
+    {
+        private readonly ControlChannelServer _server;
+        private readonly TcpClient _client;
+        private Stream _stream;
+
+        internal ControlChannelServer Server => _server;
+        internal TcpClient TcpClient => _client;
+        internal Stream Stream => _stream;
+
+        private TestServerWithTcpClient()
+        {
+            _server = TestHelper.CreateDefaultServer();
+            _client = TestHelper.CreateTcpClient();
+            _server.Open();
         }
 
-        public static void WriteControl( this Stream s, IReadOnlyDictionary<string, string> data )
+        private async Task OpenAsync()
         {
-            byte[] buffer = ControlMessage.SerializeControlMessage( data );
-            s.WriteInt32( buffer.Length );
-            s.WriteBuffer( buffer );
+            await _client.ConnectAsync( _server );
+            _stream = await _client.GetDataStreamAsync( _server );
+            _stream.WriteDummyAuth();
+        }
+
+        internal static async Task<TestServerWithTcpClient> Create()
+        {
+            var c = new TestServerWithTcpClient();
+            await c.OpenAsync();
+            return c;
+        }
+
+        public void Dispose()
+        {
+            _stream.Dispose();
+            _client.Dispose();
+            _server.Dispose();
         }
     }
 }

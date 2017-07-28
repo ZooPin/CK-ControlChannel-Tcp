@@ -1,7 +1,8 @@
-﻿using CK.ControlChannel.Abstractions;
+using CK.ControlChannel.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace CK.ControlChannel.Tcp
 {
@@ -20,7 +21,7 @@ namespace CK.ControlChannel.Tcp
             throw new NotImplementedException();
         }
 
-        public void Send( string channelName, byte[] data )
+        public Task SendAsync( string channelName, byte[] data )
         {
             throw new NotImplementedException();
         }

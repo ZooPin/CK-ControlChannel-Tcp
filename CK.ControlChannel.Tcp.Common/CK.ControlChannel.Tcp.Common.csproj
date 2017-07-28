@@ -2,12 +2,10 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard1.3;net461</TargetFrameworks>
-    <AssemblyName>CK.ControlChannel.Tcp.Client</AssemblyName>
     <RootNamespace>CK.ControlChannel.Tcp</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="8.0.0" />
     <PackageReference Include="CK.ControlChannel.Abstractions" Version="0.0.0-a01-00-develop-0004" />
   </ItemGroup>
 

@@ -2,15 +2,19 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard1.3;net461</TargetFrameworks>
-    <AssemblyName>CK.ControlChannel.Tcp</AssemblyName>
+    <AssemblyName>CK.ControlChannel.Tcp.Server</AssemblyName>
     <RootNamespace>CK.ControlChannel.Tcp</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="8.0.0" />
-    <PackageReference Include="CK.ControlChannel.Abstractions" Version="0.0.0-a01-00-develop-0003" />
+    <PackageReference Include="CK.ControlChannel.Abstractions" Version="0.0.0-a01-00-develop-0004" />
     <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
     <PackageReference Include="System.Net.Security" Version="4.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CK.ControlChannel.Tcp.Common\CK.ControlChannel.Tcp.Common.csproj" />
   </ItemGroup>
 
 </Project>
