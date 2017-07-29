@@ -253,4 +253,4 @@ paket-files/
 
 # Custom rules
 /CodeCakeBuilder/Tools/
-!/Tests/CK.ControlChannel.Tcp.Tests/CK.ControlChannel.Tcp.Tests.pfx
+!/Tests/CK.ControlChannel.Tcp.Tests/*.pfx

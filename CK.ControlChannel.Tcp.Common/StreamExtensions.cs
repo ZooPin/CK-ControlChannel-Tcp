@@ -1,7 +1,8 @@
-using CK.ControlChannel.Abstractions;
+﻿using CK.ControlChannel.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -124,6 +125,20 @@ namespace CK.ControlChannel.Tcp
         public static void WriteUInt16( this Stream @this, ushort i )
         {
             @this.WriteBuffer( BitConverter.GetBytes( i ) );
+        }
+        public static string ToHexString( this byte[] ba )
+        {
+            StringBuilder hex = new StringBuilder( ba.Length * 2 );
+            foreach( byte b in ba ) hex.AppendFormat( "{0:X2}", b );
+            return hex.ToString();
+        }
+        public static string Describe( this X509Certificate c )
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append( c.GetCertHash().ToHexString() );
+            sb.Append( ": " );
+            sb.Append( c.Subject );
+            return sb.ToString();
         }
     }
 }

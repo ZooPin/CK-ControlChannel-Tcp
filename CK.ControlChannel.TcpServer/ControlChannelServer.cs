@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using CK.ControlChannel.Abstractions;
@@ -11,11 +11,14 @@ using CK.Core;
 using System.Net.Security;
 using System.IO;
 using System.Collections.Concurrent;
+using System.Security.Authentication;
 
 namespace CK.ControlChannel.Tcp
 {
     public partial class ControlChannelServer : IControlChannelServer, IDisposable
     {
+        public static readonly CKTrait ClientLogTag = ActivityMonitor.Tags.Register( "ControlChannelServer.Client" );
+
         private readonly string _host;
         private readonly int _port;
         private readonly X509Certificate2 _serverCertificate;
@@ -23,18 +26,35 @@ namespace CK.ControlChannel.Tcp
         private readonly ConcurrentDictionary<string, TcpServerClientSession> _activeSessions = new ConcurrentDictionary<string, TcpServerClientSession>();
         private readonly ManualResetEvent _connectEvent = new ManualResetEvent( false );
         private readonly Dictionary<string, ServerChannelDataHandler> _channelHandlers = new Dictionary<string, ServerChannelDataHandler>();
+        private readonly RemoteCertificateValidationCallback _userCertificateValidationCallback;
+
         private CancellationTokenSource _cts;
         private TcpListener _tcpListener;
         private Task _listenTask;
         private IPEndPoint _ep;
         private bool _isOpen;
 
-        public ControlChannelServer( string host, int port, IAuthorizationHandler authHandler, X509Certificate2 serverCertificate = null )
+        /// <summary>
+        /// Creates a new instance of <see cref="ControlChannelServer"/>.
+        /// </summary>
+        /// <param name="host">IP adress to bind to</param>
+        /// <param name="port">Port to bind to</param>
+        /// <param name="authHandler">Client authentication handler</param>
+        /// <param name="serverCertificate">Server SSL certificate; a non-null value enables SSL</param>
+        /// <param name="userCertificateValidationCallback">User certficate validation callback; a non-null value forces client to present a certificate</param>
+        public ControlChannelServer(
+            string host,
+            int port,
+            IAuthorizationHandler authHandler,
+            X509Certificate2 serverCertificate = null,
+            RemoteCertificateValidationCallback userCertificateValidationCallback = null
+            )
         {
             _host = host;
             _port = port;
             _authHandler = authHandler;
             _serverCertificate = serverCertificate;
+            _userCertificateValidationCallback = userCertificateValidationCallback;
         }
 
         public string Host => _host;
@@ -106,6 +126,7 @@ namespace CK.ControlChannel.Tcp
         private async Task AcceptClientAsync( TcpClient c )
         {
             IActivityMonitor m = new ActivityMonitor();
+            m.AutoTags = ClientLogTag;
             m.Debug( () =>
             {
                 IPEndPoint ep = c.Client.RemoteEndPoint as IPEndPoint;
@@ -124,10 +145,25 @@ namespace CK.ControlChannel.Tcp
             {
                 if( _serverCertificate != null )
                 {
-                    using( SslStream ssl = new SslStream( ns, false ) )
+                    using( SslStream ssl = new SslStream(
+                        ns,
+                        false,
+                        _userCertificateValidationCallback,
+                        null,
+                        EncryptionPolicy.RequireEncryption
+                        ) )
                     {
-                        m.Debug( () => "Using SSL stream" );
-                        await ssl.AuthenticateAsServerAsync( _serverCertificate );
+                        m.Debug( () => $"Using SSL stream with server certificate: {_serverCertificate.Describe()}" );
+                        await ssl.AuthenticateAsServerAsync(
+                            _serverCertificate,
+                            _userCertificateValidationCallback != null,
+                            SslProtocols.Tls12,
+                            true
+                            );
+                        if( m.ShouldLogLine( LogLevel.Debug ) && ssl.RemoteCertificate != null )
+                        {
+                            m.Debug( () => $"Client connected with certificate: {ssl.RemoteCertificate.Describe()}" );
+                        }
                         await HandleClientStreamAsync( m, ssl, c );
                     }
                 }

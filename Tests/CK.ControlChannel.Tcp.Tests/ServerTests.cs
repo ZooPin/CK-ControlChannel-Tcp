@@ -1,5 +1,4 @@
-﻿using CK.ControlChannel.Abstractions;
-using CK.ControlChannel.Tcp;
+﻿using CK.ControlChannel.Tcp;
 using CK.Core;
 using FluentAssertions;
 using System;
@@ -521,14 +520,14 @@ namespace CK.ControlChannel.Tcp.Tests
         }
 
         [Fact]
-        public async Task high_speed_ping_pong_battle()
+        public void high_speed_ping_pong_battle()
         {
             using( var server = TestHelper.CreateDefaultServer() )
             {
-                server.RegisterChannelHandler( "ping", ( m, data, ctx ) =>
+                server.RegisterChannelHandler( "ping", ( m, data, clientSession ) =>
                 {
                     m.Debug( "Pong!!" );
-                    ctx.Send( "pong", new byte[] { 0x02 } );
+                    clientSession.Send( "pong", new byte[] { 0x02 } );
                 } );
                 server.Open();
                 List<Task> clientTasks = new List<Task>();
@@ -586,19 +585,47 @@ namespace CK.ControlChannel.Tcp.Tests
                 Task.WaitAll( clientTasks.ToArray() );
             }
         }
-    }
 
-    public class TestAuthHandler : IAuthorizationHandler
-    {
-        private readonly Func<IServerClientSession, bool> _handler;
-
-        public TestAuthHandler( Func<IServerClientSession, bool> handler )
+        [Fact]
+        public async Task server_accepts_client_ssl_certificate()
         {
-            _handler = handler;
+            using( var server = TestHelper.CreateDefaultServer( null, TestHelper.ClientCertificateValidationCallback ) )
+            {
+                server.Open();
+                using( var client = TestHelper.CreateTcpClient() )
+                {
+                    await client.ConnectAsync( server );
+                    using( var s = await client.GetDataStreamAsync( server, TestHelper.ClientCertificateSelectionCallback ) )
+                    {
+                        s.WriteDummyAuth();
+                        s.WriteBye();
+                        s.ReadByte();
+                    }
+                }
+            }
         }
-        public bool OnAuthorizeSession( IServerClientSession s )
+
+        [Fact]
+        public async Task server_refuses_client_ssl_certificate()
         {
-            return _handler( s );
+            using( var server = TestHelper.CreateDefaultServer( null, ( sender, cert, chain, policyErrors ) => false ) )
+            {
+                server.Open();
+                using( var client = TestHelper.CreateTcpClient() )
+                {
+                    await client.ConnectAsync( server );
+                    using( var s = await client.GetDataStreamAsync( server, TestHelper.ClientCertificateSelectionCallback ) )
+                    {
+                        Action act = () =>
+                        {
+                            s.WriteDummyAuth();
+                            s.WriteBye();
+                            s.ReadByte();
+                        };
+                        act.ShouldThrow<IOException>().WithInnerException<SocketException>();
+                    }
+                }
+            }
         }
     }
 }
