@@ -1,4 +1,4 @@
-﻿using CK.ControlChannel.Tcp;
+using CK.ControlChannel.Tcp;
 using CK.Core;
 using FluentAssertions;
 using System;
@@ -246,6 +246,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 // Register client -> server channel
                 s.WriteByte( Protocol.M_PUB_TOPIC );
                 s.WriteString( "test", Protocol.TextEncoding );
+                s.ReadAck().Should().Be( Protocol.M_PUB_TOPIC );
                 ushort testChannelId = s.ReadUInt16();
 
                 // Send data
@@ -273,6 +274,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 // Register client -> server channel
                 s.WriteByte( Protocol.M_PUB_TOPIC );
                 s.WriteString( "test", Protocol.TextEncoding );
+                s.ReadAck().Should().Be( Protocol.M_PUB_TOPIC );
                 ushort testChannelId = s.ReadUInt16();
 
                 // Send data
@@ -314,6 +316,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 // Register server -> client channel
                 s.WriteByte( Protocol.M_SUB_TOPIC );
                 s.WriteString( "test", Protocol.TextEncoding );
+                s.ReadAck().Should().Be( Protocol.M_SUB_TOPIC );
                 ushort testChannelId = s.ReadUInt16();
 
                 // Other side needs to be on other thread
@@ -340,6 +343,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 // Register client -> server channel
                 s.WriteByte( Protocol.M_PUB_TOPIC );
                 s.WriteString( "test", Protocol.TextEncoding );
+                s.ReadAck().Should().Be( Protocol.M_PUB_TOPIC );
                 ushort testChannelId = s.ReadUInt16();
 
                 testChannelId.Should().Be( 0 );
@@ -347,6 +351,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 // Register client -> server channel
                 s.WriteByte( Protocol.M_PUB_TOPIC );
                 s.WriteString( "test2", Protocol.TextEncoding );
+                s.ReadAck().Should().Be( Protocol.M_PUB_TOPIC );
                 ushort test2ChannelId = s.ReadUInt16();
 
                 test2ChannelId.Should().Be( 1 );
@@ -360,6 +365,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 // Register client -> server channel
                 s.WriteByte( Protocol.M_PUB_TOPIC );
                 s.WriteString( "test3", Protocol.TextEncoding );
+                s.ReadAck().Should().Be( Protocol.M_PUB_TOPIC );
                 ushort test3ChannelId = s.ReadUInt16();
 
                 test3ChannelId.Should().Be( 0 );
@@ -389,6 +395,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 // Register server -> client channel
                 s.WriteByte( Protocol.M_SUB_TOPIC );
                 s.WriteString( "test", Protocol.TextEncoding );
+                s.ReadAck().Should().Be( Protocol.M_SUB_TOPIC );
                 ushort testChannelId = s.ReadUInt16();
 
                 testChannelId.Should().Be( 0 );
@@ -396,6 +403,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 // Register server -> client channel
                 s.WriteByte( Protocol.M_SUB_TOPIC );
                 s.WriteString( "test2", Protocol.TextEncoding );
+                s.ReadAck().Should().Be( Protocol.M_SUB_TOPIC );
                 ushort test2ChannelId = s.ReadUInt16();
 
                 test2ChannelId.Should().Be( 1 );
@@ -409,6 +417,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 // Register server -> client channel
                 s.WriteByte( Protocol.M_SUB_TOPIC );
                 s.WriteString( "test3", Protocol.TextEncoding );
+                s.ReadAck().Should().Be( Protocol.M_SUB_TOPIC );
                 ushort test3ChannelId = s.ReadUInt16();
 
                 test3ChannelId.Should().Be( 0 );
@@ -485,11 +494,13 @@ namespace CK.ControlChannel.Tcp.Tests
                         // Register client -> server channel
                         s.WriteByte( Protocol.M_PUB_TOPIC );
                         s.WriteString( "test", Protocol.TextEncoding );
+                        s.ReadAck().Should().Be( Protocol.M_PUB_TOPIC );
                         ushort testChannelId = s.ReadUInt16();
 
                         // Register server -> client channel
                         s.WriteByte( Protocol.M_SUB_TOPIC );
                         s.WriteString( "test-backchannel", Protocol.TextEncoding );
+                        s.ReadAck().Should().Be( Protocol.M_SUB_TOPIC );
                         ushort testBackchannelChannelId = s.ReadUInt16();
 
                         // Send data
@@ -549,10 +560,12 @@ namespace CK.ControlChannel.Tcp.Tests
 
                                 s.WriteByte( Protocol.M_PUB_TOPIC );
                                 s.WriteString( "ping", Protocol.TextEncoding );
+                                s.ReadAck().Should().Be( Protocol.M_PUB_TOPIC );
                                 ushort pingChanId = s.ReadUInt16();
 
                                 s.WriteByte( Protocol.M_SUB_TOPIC );
                                 s.WriteString( "pong", Protocol.TextEncoding );
+                                s.ReadAck().Should().Be( Protocol.M_SUB_TOPIC );
                                 ushort pongChanId = s.ReadUInt16();
 
                                 m.Debug( "Ping!!" );

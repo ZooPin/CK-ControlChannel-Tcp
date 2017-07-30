@@ -95,6 +95,7 @@ namespace CK.ControlChannel.Tcp
                         channelName = s.ReadString( Protocol.TextEncoding );
                         channelId = session.RegisterOrGetIncomingChannel( channelName );
                         m.Debug( () => $"Registered incoming channel {channelName} to {channelId}" );
+                        s.WriteAck( Protocol.M_PUB_TOPIC );
                         s.WriteUInt16( channelId );
                         break;
                     case Protocol.M_UNPUB_TOPIC:
@@ -107,6 +108,7 @@ namespace CK.ControlChannel.Tcp
                         channelName = s.ReadString( Protocol.TextEncoding );
                         channelId = session.RegisterOrGetOutgoingChannel( channelName );
                         m.Debug( () => $"Registered outgoing channel {channelName} to {channelId}" );
+                        s.WriteAck( Protocol.M_SUB_TOPIC );
                         s.WriteUInt16( channelId );
                         break;
                     case Protocol.M_UNSUB_TOPIC:
