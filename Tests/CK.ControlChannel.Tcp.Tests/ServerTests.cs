@@ -552,7 +552,7 @@ namespace CK.ControlChannel.Tcp.Tests
                             await client.ConnectAsync( server );
                             var s = await client.GetDataStreamAsync( server );
                             s.WriteDummyAuth();
-                            for( int j = 0; j < 1000; j++ )
+                            for( int j = 0; j < 100; j++ )
                             {
                                 m.Debug( "Ping!" );
                                 s.WritePing();
