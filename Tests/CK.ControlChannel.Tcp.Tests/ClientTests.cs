@@ -123,7 +123,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 {
                     await client.OpenAsync( m );
 
-                    client.RegisterChannelHandler( "test", ( a, b, c ) =>
+                    client.RegisterChannelHandler( "test", ( mon, data ) =>
                      {
                          complete = true;
                          ev.Set();

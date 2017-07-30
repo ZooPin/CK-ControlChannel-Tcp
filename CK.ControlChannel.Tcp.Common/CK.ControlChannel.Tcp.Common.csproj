@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.ControlChannel.Abstractions" Version="0.0.0-a01-00-develop-0004" />
+    <PackageReference Include="CK.ControlChannel.Abstractions" Version="0.0.0-a01-00-develop-0005" />
   </ItemGroup>
 
 </Project>

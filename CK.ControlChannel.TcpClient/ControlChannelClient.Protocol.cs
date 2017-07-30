@@ -93,7 +93,7 @@ namespace CK.ControlChannel.Tcp
                                 {
                                     if( _incomingChannelHandlers.TryGetValue( channelName, out handler ) )
                                     {
-                                        handler( m, buffer, null );
+                                        handler( m, buffer );
                                     }
                                 }
                                 else
