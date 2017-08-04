@@ -23,6 +23,11 @@ namespace CK.ControlChannel.Tcp
         private ConcurrentDictionary<string, ushort?> _subChannels = new ConcurrentDictionary<string, ushort?>();
         private ConcurrentDictionary<ushort, string> _subChannelsById = new ConcurrentDictionary<ushort, string>();
 
+        /// <summary>
+        /// Event fired after server acknowledges incoming channel registration.
+        /// </summary>
+        public event EventHandler<ChannelEventArgs> OnChannelRegistered;
+
 
         /// <summary>
         /// Perform authentication on the given stream.
@@ -75,6 +80,7 @@ namespace CK.ControlChannel.Tcp
                     switch( b )
                     {
                         case Protocol.M_MSG_PUB:
+                            m.Debug( () => "Receiving: M_MSG_PUB" );
                             channelId = _dataStream.ReadUInt16();
                             len = _dataStream.ReadInt32();
                             if( len > 0 )
@@ -83,6 +89,7 @@ namespace CK.ControlChannel.Tcp
                                 _msgSemaphore.Wait();
                                 try
                                 {
+                                    m.Debug( () => "Writing ACK: M_MSG_PUB" );
                                     _dataStream.WriteAck( Protocol.M_MSG_PUB );
                                 }
                                 finally
@@ -91,9 +98,14 @@ namespace CK.ControlChannel.Tcp
                                 }
                                 if( _subChannelsById.TryGetValue( channelId, out channelName ) )
                                 {
+                                    m.Debug( () => $"Handling message with channel {channelId}: {channelName}" );
                                     if( _incomingChannelHandlers.TryGetValue( channelName, out handler ) )
                                     {
                                         handler( m, buffer );
+                                    }
+                                    else
+                                    {
+                                        m.Warn( () => $"No handler registered to handle channel {channelName}. Message is lost." );
                                     }
                                 }
                                 else
@@ -104,7 +116,7 @@ namespace CK.ControlChannel.Tcp
                             }
                             else
                             {
-                                m.Error( $"Received invlid length {len}" );
+                                m.Error( $"Received invalid length {len}" );
                                 quit = true;
                             }
                             break;
@@ -112,6 +124,7 @@ namespace CK.ControlChannel.Tcp
                             int ackedHeader = _dataStream.ReadByte();
                             if( ackedHeader < 0 )
                             {
+                                m.Debug( () => "ACK disconnecting" );
                                 quit = true;
                                 break;
                             } // Disconnected
@@ -199,6 +212,17 @@ namespace CK.ControlChannel.Tcp
                                         {
                                             m.Debug( () => $"Added incoming channel {channelName} = {channelId}" );
                                             _subChannelsById.TryAdd( channelId, channelName );
+                                            if( OnChannelRegistered != null )
+                                            {
+                                                try
+                                                {
+                                                    OnChannelRegistered( this, new ChannelEventArgs( channelName ) );
+                                                }
+                                                catch( Exception ex )
+                                                {
+                                                    m.Error( "Caught during OnChannelRegistered event", ex );
+                                                }
+                                            }
                                         }
                                         else
                                         {

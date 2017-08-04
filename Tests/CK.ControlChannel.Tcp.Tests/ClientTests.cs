@@ -107,11 +107,6 @@ namespace CK.ControlChannel.Tcp.Tests
             using( var server = TestHelper.CreateDefaultServer() )
             {
                 server.Open();
-                server.RegisterChannelHandler( "test", ( mo, d, c ) =>
-                {
-                    ev.Set();
-                    complete = true;
-                } );
                 using( var client = new ControlChannelClient(
                     server.Host,
                     server.Port,
@@ -123,16 +118,29 @@ namespace CK.ControlChannel.Tcp.Tests
                 {
                     await client.OpenAsync( m );
 
+                    client.OnChannelRegistered += ( sender, chanArgs ) =>
+                    {
+                        sender.Should().Be( client );
+                        chanArgs.ChannelName.Should().Be( "test" );
+                        ev.Set();
+                    };
+
+                    // Register incoming channel
                     client.RegisterChannelHandler( "test", ( mon, data ) =>
                      {
+                         data.ShouldBeEquivalentTo( new byte[] { 0x42 } );
                          complete = true;
                          ev.Set();
                      } );
-                    await Task.Delay( 200 );
 
-                    var t = Task.Run( () => server.ActiveSessions.Single().Send( "test", new byte[] { 0x00 } ) );
+                    // Wait for registration
+                    ev.WaitOne();
+                    ev.Reset();
 
-                    ev.WaitOne( 1000 );
+                    // Send Server-to-Client message
+                    await Task.Run( () => server.ActiveSessions.Single().Send( "test", new byte[] { 0x42 } ) );
+
+                    ev.WaitOne();
                     complete.Should().Be( true );
                 }
             }

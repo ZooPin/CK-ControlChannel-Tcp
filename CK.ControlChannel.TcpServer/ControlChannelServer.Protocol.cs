@@ -144,6 +144,10 @@ namespace CK.ControlChannel.Tcp
                             }
                         }
                         break;
+                    case Protocol.M_ACK:
+                        int type = s.ReadByte();
+                        m.Debug( () => $"Received ACK from client for message type {type}" );
+                        break;
                     case Protocol.M_PING:
                         m.Debug( () => $"Pong!" );
                         s.WriteByte( Protocol.M_PING );
@@ -154,7 +158,7 @@ namespace CK.ControlChannel.Tcp
                         quit = true;
                         break;
                     default:
-                        m.Error( $"Invalid header ${header}" );
+                        m.Error( $"Invalid header {header}" );
                         s.Error( Protocol.E_INVALID_MESSAGE );
                         quit = true;
                         break;

@@ -21,7 +21,7 @@ namespace CK.ControlChannel.Tcp
         private readonly IReadOnlyDictionary<string, string> _authData;
         private readonly RemoteCertificateValidationCallback _serverCertificateValidationCallback;
         private readonly LocalCertificateSelectionCallback _localCertificateSelectionCallback;
-        private readonly Dictionary<string, ClientChannelDataHandler> _incomingChannelHandlers = new Dictionary<string, ClientChannelDataHandler>();
+        private readonly ConcurrentDictionary<string, ClientChannelDataHandler> _incomingChannelHandlers = new ConcurrentDictionary<string, ClientChannelDataHandler>();
         private readonly ConcurrentQueue<ChannelMessage> _pendingMessages = new ConcurrentQueue<ChannelMessage>();
         private readonly SemaphoreSlim _msgSemaphore = new SemaphoreSlim( 1, 1 );
         private CancellationTokenSource _cts;
@@ -159,12 +159,23 @@ namespace CK.ControlChannel.Tcp
 
         public bool CanUse => _error == null;
 
+        /// <summary>
+        /// Registers a channel handler, without waiting for server ACK.
+        /// </summary>
+        /// <param name="channelName">Channel name to register</param>
+        /// <param name="handler">Handler action</param>
         public void RegisterChannelHandler( string channelName, ClientChannelDataHandler handler )
         {
-            _incomingChannelHandlers.Add( channelName, handler );
-            if( IsOpen )
+            if( _incomingChannelHandlers.TryAdd( channelName, handler ) )
             {
-                RegisterIncomingChannel( channelName );
+                if( IsOpen )
+                {
+                    RegisterIncomingChannel( channelName );
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException( $"Channel already registered: {channelName}" );
             }
         }
 
