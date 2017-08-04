@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Linq;
 using System.Net.Security;
 using System.Reflection;
@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using CK.ControlChannel.Abstractions;
 using CK.Core;
 using System.Text;
+using System.Collections.Generic;
 
 namespace CK.ControlChannel.Tcp.Tests
 {
@@ -57,6 +58,11 @@ namespace CK.ControlChannel.Tcp.Tests
                 return _defaultAuthHandler;
             }
         }
+
+        public static IReadOnlyDictionary<string, string> ClientDefaultAuthData => new Dictionary<string, string>()
+        {
+            ["Hello"] = "World",
+        };
 
         internal static readonly RemoteCertificateValidationCallback ServerCertificateValidationCallback =
             ( sender, cert, chain, policyErrors ) =>
@@ -110,6 +116,26 @@ namespace CK.ControlChannel.Tcp.Tests
         internal static TcpClient CreateTcpClient()
         {
             return new TcpClient( AddressFamily.InterNetwork );
+        }
+
+        internal static ControlChannelClient CreateDefaultClient(
+            IReadOnlyDictionary<string, string> authData = null,
+            LocalCertificateSelectionCallback certSelector = null,
+            RemoteCertificateValidationCallback certValidator = null
+            )
+        {
+            if( certSelector == null ) { certSelector = ClientCertificateSelectionCallback; }
+            if( certValidator == null ) { certValidator = ServerCertificateValidationCallback; }
+            if( authData == null ) { authData = ClientDefaultAuthData; }
+
+            return new ControlChannelClient(
+                DefaultHost,
+                DefaultPort,
+                ClientDefaultAuthData,
+                true,
+                certValidator,
+                certSelector
+                );
         }
     }
 }

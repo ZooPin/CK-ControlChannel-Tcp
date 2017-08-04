@@ -21,14 +21,17 @@ namespace CK.ControlChannel.Tcp
         private readonly IReadOnlyDictionary<string, string> _authData;
         private readonly RemoteCertificateValidationCallback _serverCertificateValidationCallback;
         private readonly LocalCertificateSelectionCallback _localCertificateSelectionCallback;
+        private readonly int _connectionRetryDelayMs;
         private readonly ConcurrentDictionary<string, ClientChannelDataHandler> _incomingChannelHandlers = new ConcurrentDictionary<string, ClientChannelDataHandler>();
         private readonly ConcurrentQueue<ChannelMessage> _pendingMessages = new ConcurrentQueue<ChannelMessage>();
         private readonly SemaphoreSlim _msgSemaphore = new SemaphoreSlim( 1, 1 );
+        private readonly SemaphoreSlim _connectSemaphore = new SemaphoreSlim( 1, 1 );
         private CancellationTokenSource _cts;
         private TcpClient _tcpClient;
         private Stream _dataStream;
         private Exception _error = null;
         private Task _listenTask;
+        private DateTime _nextConnectionRetry = DateTime.MinValue;
 
         /// <summary>
         /// Creates  a new instance of <see cref="ControlChannelClient"/>.
@@ -39,14 +42,15 @@ namespace CK.ControlChannel.Tcp
         /// <param name="isSecure">True is the connection should be made using SSL.</param>
         /// <param name="serverCertificateValidationCallback">The server certificate validation callback. If null, the default will be used.</param>
         /// <param name="localCertificateSelectionCallback">The local certificate selection callback. If null, no user certificate will be sent when connecting.</param>
-        /// <param name="m">The <see cref="IActivityMonitor"/> used when trying to connect for the first time.</param>
+        /// <param name="connectionRetryDelayMs">The delay to wait before trying to reconnect after a failed connection, in milliseconds.</param>
         public ControlChannelClient(
             string host,
             int port,
             IReadOnlyDictionary<string, string> authenticationData,
             bool isSecure,
             RemoteCertificateValidationCallback serverCertificateValidationCallback = null,
-            LocalCertificateSelectionCallback localCertificateSelectionCallback = null
+            LocalCertificateSelectionCallback localCertificateSelectionCallback = null,
+            int connectionRetryDelayMs = 10*1000 // 10 sec
             )
         {
             _host = host;
@@ -55,6 +59,7 @@ namespace CK.ControlChannel.Tcp
             _authData = authenticationData;
             _serverCertificateValidationCallback = serverCertificateValidationCallback;
             _localCertificateSelectionCallback = localCertificateSelectionCallback;
+            _connectionRetryDelayMs = connectionRetryDelayMs;
         }
 
         private async Task ConnectAndAuthenticateAsync( IActivityMonitor m )
@@ -119,12 +124,24 @@ namespace CK.ControlChannel.Tcp
             if( m == null ) { m = new ActivityMonitor(); }
             try
             {
+                await _connectSemaphore.WaitAsync();
+                if( IsOpen || DateTime.Now < _nextConnectionRetry )
+                {
+                    return;
+                }
                 _cts = new CancellationTokenSource();
                 await ConnectAndAuthenticateAsync( m );
                 if( _dataStream != null )
                 {
                     _listenTask = Task.Factory.StartNew( () => Listen( _cts.Token ), _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default );
+
+                    // Register all incoming channels (outgoing channels will be registered when sending messages)
+                    foreach( var p in _incomingChannelHandlers )
+                    {
+                        RegisterIncomingChannel( p.Key );
+                    }
                 }
+                _nextConnectionRetry = DateTime.Now;
 
             }
             catch( ControlChannelException ex )
@@ -132,21 +149,18 @@ namespace CK.ControlChannel.Tcp
                 m.Error( "Permanent error", ex );
                 _error = ex;
                 Close();
+                _nextConnectionRetry = DateTime.Now + TimeSpan.FromMilliseconds( _connectionRetryDelayMs );
             }
             catch( Exception ex )
             {
                 m.Warn( "Connection error", ex );
                 Close();
+                _nextConnectionRetry = DateTime.Now + TimeSpan.FromMilliseconds( _connectionRetryDelayMs );
             }
-        }
-
-        private async Task<Stream> EnsureConnectionAsync()
-        {
-            if( _dataStream == null )
+            finally
             {
-                await OpenAsync();
+                _connectSemaphore.Release();
             }
-            return _dataStream;
         }
 
         public string Host => _host;
@@ -185,6 +199,19 @@ namespace CK.ControlChannel.Tcp
             _pendingMessages.Enqueue( new ChannelMessage( channelName, data ) );
             if( IsOpen )
             {
+                await InternalSendAsync( m, channelName, data );
+            }
+            else
+            {
+                await OpenAsync( m );
+                await InternalSendAsync( m, channelName, data );
+            }
+        }
+
+        private async Task InternalSendAsync( IActivityMonitor m, string channelName, byte[] data )
+        {
+            if( IsOpen )
+            {
                 RegisterOutgoingChannel( channelName );
                 await ProcessQueueAsync( m );
             }
@@ -215,7 +242,7 @@ namespace CK.ControlChannel.Tcp
                         }
                         else
                         {
-                            m.Debug( () => $"Channel {msg.ChannelName} did not receive an ID from server yet; requeuing" );
+                            m.Debug( () => $"Channel {msg.ChannelName} did not receive a channelId from server yet; requeuing" );
                             pendingMsg.Enqueue( msg );
                         }
                     }
@@ -225,7 +252,7 @@ namespace CK.ControlChannel.Tcp
                         pendingMsg.Enqueue( msg );
                     }
                 }
-                // Put back messages that could  not be sent
+                // Put back messages that could not be sent
                 foreach( var pmsg in pendingMsg ) { _pendingMessages.Enqueue( pmsg ); }
 
             }

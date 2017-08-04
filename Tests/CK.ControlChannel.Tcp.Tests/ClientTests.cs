@@ -145,5 +145,103 @@ namespace CK.ControlChannel.Tcp.Tests
                 }
             }
         }
+
+        [Fact]
+        public async Task client_can_queue_message_offline()
+        {
+            var m = new ActivityMonitor();
+            Dictionary<string, string> authenticationData = new Dictionary<string, string>()
+            {
+                ["hello"] = "world"
+            };
+            using( var client = new ControlChannelClient(
+                TestHelper.DefaultHost,
+                TestHelper.DefaultPort,
+                authenticationData,
+                true,
+                TestHelper.ServerCertificateValidationCallback,
+                TestHelper.ClientCertificateSelectionCallback
+                ) )
+            {
+                await client.OpenAsync( m );
+
+                await client.SendAsync( "test", new byte[] { 0x00 } );
+            }
+        }
+
+        [Fact]
+        public async Task client_can_send_messages_without_connecting_manually()
+        {
+            var m = new ActivityMonitor();
+            var ev = new ManualResetEvent( false );
+            bool complete = false;
+            using( var server = TestHelper.CreateDefaultServer() )
+            {
+                server.Open();
+                server.RegisterChannelHandler( "test", ( mo, d, c ) =>
+                {
+                    ev.Set();
+                    complete = true;
+                } );
+                using( var client = TestHelper.CreateDefaultClient() )
+                {
+                    await client.SendAsync( "test", new byte[] { 0x00 } );
+
+                    ev.WaitOne( 1000 );
+                    complete.Should().Be( true );
+                }
+            }
+        }
+
+        [Fact]
+        public async Task client_can_register_incoming_channel_before_connecting()
+        {
+            var m = new ActivityMonitor();
+            var ev = new ManualResetEvent( false );
+            bool complete = false;
+            using( var server = TestHelper.CreateDefaultServer() )
+            {
+                server.Open();
+                server.RegisterChannelHandler( "test", ( mo, d, c ) =>
+                {
+                    ev.Set();
+                    complete = true;
+                } );
+                using( var client = TestHelper.CreateDefaultClient() )
+                {
+
+                    client.OnChannelRegistered += ( sender, chanArgs ) =>
+                    {
+                        // On channel registered
+                        sender.Should().Be( client );
+                        chanArgs.ChannelName.Should().Be( "test" );
+                        ev.Set();
+                    };
+
+                    // Register incoming channel
+                    client.RegisterChannelHandler( "test", ( mon, data ) =>
+                    {
+                        // On message received from server
+                        data.ShouldBeEquivalentTo( new byte[] { 0x42 } );
+                        complete = true;
+                        ev.Set();
+                    } );
+
+                    // Connect manually
+                    await client.OpenAsync( m );
+
+                    // Wait for server registration (OnChannelRegistered above)
+                    ev.WaitOne();
+                    ev.Reset();
+
+                    // Send Server-to-Client message
+                    await Task.Run( () => server.ActiveSessions.Single().Send( "test", new byte[] { 0x42 } ) );
+
+                    // Wait for Server-to-Client message (RegisterChannelHandler above)
+                    ev.WaitOne( 1000 );
+                    complete.Should().Be( true );
+                }
+            }
+        }
     }
 }
