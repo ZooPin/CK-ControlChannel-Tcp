@@ -66,14 +66,12 @@ namespace CK.ControlChannel.Tcp
         {
             if( _tcpClient != null ) { throw new InvalidOperationException( "A TcpClient already exists." ); }
             _tcpClient = new TcpClient( AddressFamily.InterNetwork );
-            m.Debug( () => $"Connecting to {_host}:{_port}" );
             await _tcpClient.ConnectAsync( _host, _port );
 
             NetworkStream ns = _tcpClient.GetStream();
             Stream writeStream;
             if( _isSecure )
             {
-                m.Debug( () => $"Using secure connection" );
                 var ssl = new SslStream(
                     ns,
                     false,
@@ -86,7 +84,7 @@ namespace CK.ControlChannel.Tcp
             }
             else
             {
-                m.Warn( () => $"Using an unsecure connection" );
+                m.Warn( () => $"ControlChannelClient is using an unsecure connection" );
                 writeStream = ns;
             }
             _dataStream = writeStream;
@@ -146,7 +144,7 @@ namespace CK.ControlChannel.Tcp
             }
             catch( ControlChannelException ex )
             {
-                m.Error( "Permanent error", ex );
+                m.Error( "Error", ex );
                 _error = ex;
                 Close();
                 _nextConnectionRetry = DateTime.Now + TimeSpan.FromMilliseconds( _connectionRetryDelayMs );
@@ -226,14 +224,12 @@ namespace CK.ControlChannel.Tcp
             await _msgSemaphore.WaitAsync();
             try
             {
-                m.Debug( () => "Processing queue" );
                 while( _pendingMessages.TryDequeue( out msg ) )
                 {
                     if( _pubChannels.TryGetValue( msg.ChannelName, out channelId ) )
                     {
                         if( channelId.HasValue )
                         {
-                            m.Debug( () => $"Sending message on channel {msg.ChannelName} = {channelId.Value}" );
                             _pendingAckMsg.Enqueue( msg );
                             _dataStream.WriteByte( Protocol.M_MSG_PUB );
                             _dataStream.WriteUInt16( channelId.Value );
@@ -242,7 +238,6 @@ namespace CK.ControlChannel.Tcp
                         }
                         else
                         {
-                            m.Debug( () => $"Channel {msg.ChannelName} did not receive a channelId from server yet; requeuing" );
                             pendingMsg.Enqueue( msg );
                         }
                     }

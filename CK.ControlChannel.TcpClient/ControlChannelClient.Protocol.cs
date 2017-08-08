@@ -62,7 +62,6 @@ namespace CK.ControlChannel.Tcp
         private void Listen( CancellationToken ct )
         {
             IActivityMonitor m = new ActivityMonitor();
-            m.Debug( () => "Listening for data" );
             bool quit = false;
             ushort channelId;
             ushort? pendingChannelId;
@@ -73,7 +72,6 @@ namespace CK.ControlChannel.Tcp
             while( !ct.IsCancellationRequested && !quit )
             {
                 int b = _dataStream.ReadByte();
-                m.Debug( () => $"Receiving message {b}" );
                 if( b < 0 ) { break; } // Disconnected
                 else
                 {
@@ -89,7 +87,6 @@ namespace CK.ControlChannel.Tcp
                                 _msgSemaphore.Wait();
                                 try
                                 {
-                                    m.Debug( () => "Writing ACK: M_MSG_PUB" );
                                     _dataStream.WriteAck( Protocol.M_MSG_PUB );
                                 }
                                 finally
@@ -98,7 +95,6 @@ namespace CK.ControlChannel.Tcp
                                 }
                                 if( _subChannelsById.TryGetValue( channelId, out channelName ) )
                                 {
-                                    m.Debug( () => $"Handling message with channel {channelId}: {channelName}" );
                                     if( _incomingChannelHandlers.TryGetValue( channelName, out handler ) )
                                     {
                                         handler( m, buffer );
@@ -124,18 +120,13 @@ namespace CK.ControlChannel.Tcp
                             int ackedHeader = _dataStream.ReadByte();
                             if( ackedHeader < 0 )
                             {
-                                m.Debug( () => "ACK disconnecting" );
                                 quit = true;
                                 break;
                             } // Disconnected
                             switch( ackedHeader )
                             {
                                 case Protocol.M_MSG_PUB:
-                                    if( _pendingAckMsg.TryDequeue( out msg ) )
-                                    {
-                                        m.Debug( () => $"Received ACK for M_MSG_PUB" );
-                                    }
-                                    else
+                                    if( !_pendingAckMsg.TryDequeue( out msg ) )
                                     {
                                         m.Error( $"Received ACK for M_MSG_PUB when there wasn't any pending" );
                                         quit = true;
@@ -144,12 +135,7 @@ namespace CK.ControlChannel.Tcp
                                 case Protocol.M_UNPUB_TOPIC:
                                     if( _pendingAckUnpub.TryDequeue( out channelName ) )
                                     {
-                                        m.Debug( () => $"Received ACK for M_UNPUB_TOPIC" );
-                                        if( _pubChannels.TryRemove( channelName, out pendingChannelId ) )
-                                        {
-                                            m.Debug( () => $"Removed outgoing channel {channelName} = {pendingChannelId}" );
-                                        }
-                                        else
+                                        if( !_pubChannels.TryRemove( channelName, out pendingChannelId ) )
                                         {
                                             m.Warn( $"Could not remove outgoing channel {channelName} from local registered channels" );
                                         }
@@ -163,10 +149,8 @@ namespace CK.ControlChannel.Tcp
                                 case Protocol.M_UNSUB_TOPIC:
                                     if( _pendingAckUnsub.TryDequeue( out channelName ) )
                                     {
-                                        m.Debug( () => $"Received ACK for M_UNSUB_TOPIC" );
                                         if( _subChannels.TryRemove( channelName, out pendingChannelId ) )
                                         {
-                                            m.Debug( () => $"Removed incoming channel {channelName} = {pendingChannelId}" );
                                             _subChannelsById.TryRemove( pendingChannelId.Value, out channelName );
                                         }
                                         else
@@ -184,12 +168,8 @@ namespace CK.ControlChannel.Tcp
                                     if( _pendingAckPub.TryDequeue( out channelName ) )
                                     {
                                         channelId = _dataStream.ReadUInt16();
-                                        m.Debug( () => $"Received ACK for M_PUB_TOPIC: Outgoing Channel {channelName} = {channelId}" );
                                         if( _pubChannels.TryUpdate( channelName, channelId, null ) )
                                         {
-                                            m.Debug( () => $"Added outgoing channel {channelName} = {channelId}" );
-
-                                            m.Debug( () => $"Outgoing channels changed: Processing queue in background" );
                                             Task.Run( () => ProcessQueueAsync( new ActivityMonitor() ) );
                                         }
                                         else
@@ -207,10 +187,8 @@ namespace CK.ControlChannel.Tcp
                                     if( _pendingAckSub.TryDequeue( out channelName ) )
                                     {
                                         channelId = _dataStream.ReadUInt16();
-                                        m.Debug( () => $"Received ACK for M_SUB_TOPIC: Incoming Channel {channelName} = {channelId}" );
                                         if( _subChannels.TryUpdate( channelName, channelId, null ) )
                                         {
-                                            m.Debug( () => $"Added incoming channel {channelName} = {channelId}" );
                                             _subChannelsById.TryAdd( channelId, channelName );
                                             if( OnChannelRegistered != null )
                                             {
