@@ -1,14 +1,11 @@
+using CK.ControlChannel.Abstractions;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Security;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
-using CK.ControlChannel.Tcp;
-using System.Net.Sockets;
-using CK.ControlChannel.Abstractions;
-using CK.Core;
-using System.Text;
-using System.Collections.Generic;
 
 namespace CK.ControlChannel.Tcp.Tests
 {
@@ -61,7 +58,7 @@ namespace CK.ControlChannel.Tcp.Tests
 
         public static IReadOnlyDictionary<string, string> ClientDefaultAuthData => new Dictionary<string, string>()
         {
-            ["Hello"] = "World",
+            [ "Hello" ] = "World",
         };
 
         internal static readonly RemoteCertificateValidationCallback ServerCertificateValidationCallback =
@@ -109,7 +106,8 @@ namespace CK.ControlChannel.Tcp.Tests
             RemoteCertificateValidationCallback userCertificateValidationCallback = null
             )
         {
-            if( authHandler == null ) { authHandler = DefaultAuthHandler; }
+            if( authHandler == null )
+                authHandler = DefaultAuthHandler;
             return new ControlChannelServer( DefaultHost, DefaultPort, authHandler, ServerCertificate, userCertificateValidationCallback );
         }
 
@@ -124,14 +122,17 @@ namespace CK.ControlChannel.Tcp.Tests
             RemoteCertificateValidationCallback certValidator = null
             )
         {
-            if( certSelector == null ) { certSelector = ClientCertificateSelectionCallback; }
-            if( certValidator == null ) { certValidator = ServerCertificateValidationCallback; }
-            if( authData == null ) { authData = ClientDefaultAuthData; }
+            if( certSelector == null )
+                certSelector = ClientCertificateSelectionCallback;
+            if( certValidator == null )
+                certValidator = ServerCertificateValidationCallback;
+            if( authData == null )
+                authData = ClientDefaultAuthData;
 
             return new ControlChannelClient(
                 DefaultHost,
                 DefaultPort,
-                ClientDefaultAuthData,
+                authData,
                 true,
                 certValidator,
                 certSelector
