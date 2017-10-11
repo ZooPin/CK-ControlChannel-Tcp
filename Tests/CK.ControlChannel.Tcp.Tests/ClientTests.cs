@@ -1,9 +1,7 @@
 using CK.Core;
 using FluentAssertions;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -20,7 +18,7 @@ namespace CK.ControlChannel.Tcp.Tests
             int port = 43712;
             Dictionary<string, string> authenticationData = new Dictionary<string, string>()
             {
-                ["hello"] = "world"
+                [ "hello" ] = "world"
             };
             using( ControlChannelClient client = new ControlChannelClient( host, port, authenticationData, false ) )
             {
@@ -37,7 +35,7 @@ namespace CK.ControlChannel.Tcp.Tests
             var m = new ActivityMonitor();
             Dictionary<string, string> authenticationData = new Dictionary<string, string>()
             {
-                ["hello"] = "world"
+                [ "hello" ] = "world"
             };
             using( var server = TestHelper.CreateDefaultServer() )
             {
@@ -66,7 +64,7 @@ namespace CK.ControlChannel.Tcp.Tests
             bool complete = false;
             Dictionary<string, string> authenticationData = new Dictionary<string, string>()
             {
-                ["hello"] = "world"
+                [ "hello" ] = "world"
             };
             using( var server = TestHelper.CreateDefaultServer() )
             {
@@ -102,7 +100,7 @@ namespace CK.ControlChannel.Tcp.Tests
             bool complete = false;
             Dictionary<string, string> authenticationData = new Dictionary<string, string>()
             {
-                ["hello"] = "world"
+                [ "hello" ] = "world"
             };
             using( var server = TestHelper.CreateDefaultServer() )
             {
@@ -152,7 +150,7 @@ namespace CK.ControlChannel.Tcp.Tests
             var m = new ActivityMonitor();
             Dictionary<string, string> authenticationData = new Dictionary<string, string>()
             {
-                ["hello"] = "world"
+                [ "hello" ] = "world"
             };
             using( var client = new ControlChannelClient(
                 TestHelper.DefaultHost,
