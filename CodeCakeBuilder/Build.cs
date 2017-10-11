@@ -1,4 +1,4 @@
-﻿using Cake.Common.Build;
+using Cake.Common.Build;
 using Cake.Common.Diagnostics;
 using Cake.Common.IO;
 using Cake.Common.Solution;
@@ -186,22 +186,13 @@ namespace CodeCake
                     }
                     if (gitInfo.IsValidRelease)
                     {
-                        if (gitInfo.PreReleaseName == ""
-                            || gitInfo.PreReleaseName == "prerelease"
-                            || gitInfo.PreReleaseName == "rc")
-                        {
-                            PushNuGetPackages("NUGET_API_KEY", "https://www.nuget.org/api/v2/package", nugetPackages);
-                        }
-                        else
-                        {
-                            // An alpha, beta, delta, epsilon, gamma, kappa goes to invenietis-preview.
-                            PushNuGetPackages("MYGET_PREVIEW_API_KEY", "https://www.myget.org/F/invenietis-preview/api/v2/package", nugetPackages);
-                        }
+                        // All Version
+                        PushNuGetPackages("MYGET_PREVIEW_API_KEY", "https://www.myget.org/F/glouton-preview/api/v2/package", nugetPackages);
                     }
                     else
                     {
                         Debug.Assert(gitInfo.IsValidCIBuild);
-                        PushNuGetPackages("MYGET_CI_API_KEY", "https://www.myget.org/F/invenietis-ci/api/v2/package", nugetPackages);
+                        PushNuGetPackages("MYGET_CI_API_KEY", "https://www.myget.org/F/glouton-ci/api/v2/package", nugetPackages);
                     }
                     if (Cake.AppVeyor().IsRunningOnAppVeyor)
                     {
