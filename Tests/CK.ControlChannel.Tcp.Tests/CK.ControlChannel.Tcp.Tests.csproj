@@ -23,8 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\CK.ControlChannel.TcpClient\CK.ControlChannel.TcpClient.csproj" />
-    <ProjectReference Include="..\..\CK.ControlChannel.TcpServer\CK.ControlChannel.TcpServer.csproj" />
+    <ProjectReference Include="..\..\src\CK.ControlChannel.TcpClient\CK.ControlChannel.TcpClient.csproj" />
+    <ProjectReference Include="..\..\src\CK.ControlChannel.TcpServer\CK.ControlChannel.TcpServer.csproj" />
   </ItemGroup>
 
   <ItemGroup>
