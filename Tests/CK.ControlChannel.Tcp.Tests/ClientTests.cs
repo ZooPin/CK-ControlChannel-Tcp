@@ -126,7 +126,7 @@ namespace CK.ControlChannel.Tcp.Tests
                     // Register incoming channel
                     client.RegisterChannelHandler( "test", ( mon, data ) =>
                      {
-                         data.ShouldBeEquivalentTo( new byte[] { 0x42 } );
+                         data.Should().BeEquivalentTo( new byte[] { 0x42 } );
                          complete = true;
                          ev.Set();
                      } );
@@ -220,7 +220,7 @@ namespace CK.ControlChannel.Tcp.Tests
                     client.RegisterChannelHandler( "test", ( mon, data ) =>
                     {
                         // On message received from server
-                        data.ShouldBeEquivalentTo( new byte[] { 0x42 } );
+                        data.Should().BeEquivalentTo( new byte[] { 0x42 } );
                         complete = true;
                         ev.Set();
                     } );

@@ -1,15 +1,11 @@
-using CK.ControlChannel.Tcp;
 using CK.Core;
 using FluentAssertions;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -63,7 +59,7 @@ namespace CK.ControlChannel.Tcp.Tests
 
                 Action act = () => s.Open();
 
-                act.ShouldThrow<InvalidOperationException>();
+                act.Should().Throw<InvalidOperationException>();
             }
         }
 
@@ -124,7 +120,7 @@ namespace CK.ControlChannel.Tcp.Tests
                         s.WriteByte( Protocol.PROTOCOL_VERSION );
                         s.WriteControl( new Dictionary<string, string>()
                         {
-                            ["hello"] = "world",
+                            [ "hello" ] = "world",
                         } );
 
                         s.ReadByte().Should().Be( Protocol.M_AUTH_FAIL );
@@ -151,7 +147,7 @@ namespace CK.ControlChannel.Tcp.Tests
                         s.WriteByte( Protocol.PROTOCOL_VERSION );
                         s.WriteControl( new Dictionary<string, string>()
                         {
-                            ["hello"] = "world",
+                            [ "hello" ] = "world",
                         } );
                         s.ReadAck().Should().Be( Protocol.PROTOCOL_VERSION );
                         server.ActiveSessions.Should().HaveCount( 1 );
@@ -327,7 +323,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 s.ReadUInt16().Should().Be( testChannelId );
                 int len = s.ReadInt32();
                 var data = await s.ReadBufferAsync( len );
-                data.ShouldAllBeEquivalentTo( new byte[] { 0x00 } );
+                data.Should().AllBeEquivalentTo( new byte[] { 0x00 } );
                 s.WriteAck( Protocol.M_MSG_PUB );
 
             }
@@ -467,7 +463,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 server.Open();
                 server.RegisterChannelHandler( "test", ( m, data, session ) =>
                  {
-                     data.ShouldAllBeEquivalentTo( new byte[] { 0x00, 0x01, 0x02, 0x03 } );
+                     data.Should().AllBeEquivalentTo( new byte[] { 0x00, 0x01, 0x02, 0x03 } );
                      session.Send( "test-backchannel", new byte[] { 0x04, 0x05, 0x06, 0x07 } );
                      evt.Set();
                  } );
@@ -480,9 +476,9 @@ namespace CK.ControlChannel.Tcp.Tests
                         s.WriteByte( Protocol.PROTOCOL_VERSION );
                         s.WriteControl( new Dictionary<string, string>()
                         {
-                            ["hello"] = "world",
-                            ["username"] = "whatever",
-                            ["password"] = "whatever",
+                            [ "hello" ] = "world",
+                            [ "username" ] = "whatever",
+                            [ "password" ] = "whatever",
                         } );
                         s.ReadAck().Should().Be( Protocol.PROTOCOL_VERSION );
 
@@ -516,7 +512,7 @@ namespace CK.ControlChannel.Tcp.Tests
                         s.ReadUInt16().Should().Be( testBackchannelChannelId );
                         int len = s.ReadInt32();
                         data = await s.ReadBufferAsync( len );
-                        data.ShouldAllBeEquivalentTo( new byte[] { 0x04, 0x05, 0x06, 0x07 } );
+                        data.Should().AllBeEquivalentTo( new byte[] { 0x04, 0x05, 0x06, 0x07 } );
                         s.WriteAck( Protocol.M_MSG_PUB );
 
                         // Bye
@@ -542,7 +538,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 } );
                 server.Open();
                 List<Task> clientTasks = new List<Task>();
-                for( int i = 0; i < Environment.ProcessorCount; i++ )
+                for( int i = 0 ; i < Environment.ProcessorCount ; i++ )
                 {
                     clientTasks.Add( Task.Factory.StartNew( async () =>
                     {
@@ -552,7 +548,7 @@ namespace CK.ControlChannel.Tcp.Tests
                             await client.ConnectAsync( server );
                             var s = await client.GetDataStreamAsync( server );
                             s.WriteDummyAuth();
-                            for( int j = 0; j < 100; j++ )
+                            for( int j = 0 ; j < 100 ; j++ )
                             {
                                 m.Debug( "Ping!" );
                                 s.WritePing();
@@ -635,7 +631,7 @@ namespace CK.ControlChannel.Tcp.Tests
                             s.WriteBye();
                             s.ReadByte();
                         };
-                        act.ShouldThrow<IOException>().WithInnerException<SocketException>();
+                        act.Should().Throw<IOException>().WithInnerException<SocketException>();
                     }
                 }
             }
