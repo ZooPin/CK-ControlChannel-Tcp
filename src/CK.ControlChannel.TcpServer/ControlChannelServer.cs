@@ -1,17 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using CK.ControlChannel.Abstractions;
-using System.Security.Cryptography.X509Certificates;
-using System.Net.Sockets;
-using System.Net;
-using System.Threading.Tasks;
-using System.Threading;
 using CK.Core;
-using System.Net.Security;
-using System.IO;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Net;
+using System.Net.Security;
+using System.Net.Sockets;
 using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace CK.ControlChannel.Tcp
 {
@@ -108,7 +106,9 @@ namespace CK.ControlChannel.Tcp
                 while( !token.IsCancellationRequested )
                 {
                     TcpClient c = await _tcpListener.AcceptTcpClientAsync();
-                    var clientTask = Task.Factory.StartNew( () => AcceptClientAsync( c ), _cts.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default ).Unwrap();
+#pragma warning disable CS4014 // We don't want to lock
+                    Task.Run( () => AcceptClientAsync( c ), _cts.Token );
+#pragma warning restore CS4014 
                 }
 
             }
@@ -178,7 +178,7 @@ namespace CK.ControlChannel.Tcp
 
         public void RegisterChannelHandler( string channelName, ServerChannelDataHandler handler )
         {
-            _channelHandlers[channelName] = handler;
+            _channelHandlers[ channelName ] = handler;
         }
 
         #region IDisposable Support
