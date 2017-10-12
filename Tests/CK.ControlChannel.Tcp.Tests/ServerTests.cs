@@ -463,7 +463,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 server.Open();
                 server.RegisterChannelHandler( "test", ( m, data, session ) =>
                  {
-                     data.Should().AllBeEquivalentTo( new byte[] { 0x00, 0x01, 0x02, 0x03 } );
+                     data.Should().BeEquivalentTo( new byte[] { 0x00, 0x01, 0x02, 0x03 } );
                      session.Send( "test-backchannel", new byte[] { 0x04, 0x05, 0x06, 0x07 } );
                      evt.Set();
                  } );
@@ -512,7 +512,7 @@ namespace CK.ControlChannel.Tcp.Tests
                         s.ReadUInt16().Should().Be( testBackchannelChannelId );
                         int len = s.ReadInt32();
                         data = await s.ReadBufferAsync( len );
-                        data.Should().AllBeEquivalentTo( new byte[] { 0x04, 0x05, 0x06, 0x07 } );
+                        data.Should().BeEquivalentTo( new byte[] { 0x04, 0x05, 0x06, 0x07 } );
                         s.WriteAck( Protocol.M_MSG_PUB );
 
                         // Bye
