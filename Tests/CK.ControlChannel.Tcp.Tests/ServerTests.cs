@@ -323,7 +323,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 s.ReadUInt16().Should().Be( testChannelId );
                 int len = s.ReadInt32();
                 var data = await s.ReadBufferAsync( len );
-                data.Should().AllBeEquivalentTo( new byte[] { 0x00 } );
+                data.Should().BeEquivalentTo( new byte[] { 0x00 } );
                 s.WriteAck( Protocol.M_MSG_PUB );
 
             }
