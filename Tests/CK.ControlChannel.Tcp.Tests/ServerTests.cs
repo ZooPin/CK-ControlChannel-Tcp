@@ -2,6 +2,7 @@ using CK.Core;
 using FluentAssertions;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
@@ -631,7 +632,13 @@ namespace CK.ControlChannel.Tcp.Tests
                             s.WriteBye();
                             s.ReadByte();
                         };
-                        act.Should().Throw<IOException>().WithInnerException<SocketException>();
+                        act.Should().Throw<IOException>().Where( e =>
+                            e.InnerException != null
+                            && (
+                                e.InnerException.GetType() == typeof( SocketException )
+                                || e.InnerException.GetType() == typeof( Win32Exception )
+                            )
+                        );
                     }
                 }
             }
