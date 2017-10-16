@@ -28,7 +28,7 @@ TCP-based implementations of [CK.ControlChannel server and client](https://githu
 
 | Branch   | Visual Studio 2017 |
 | -------- | ------- |
-| latest | [![Latest build](https://ci.appveyor.com/api/projects/status/uqboxbedxgmehc9k?svg=true)](https://ci.appveyor.com/project/ZooPin/ck-controlchannel-tcp) |
+| `latest` | [![Latest build](https://ci.appveyor.com/api/projects/status/uqboxbedxgmehc9k?svg=true)](https://ci.appveyor.com/project/ZooPin/ck-controlchannel-tcp) |
 | `develop`  | [![Latest develop build](https://ci.appveyor.com/api/projects/status/uqboxbedxgmehc9k/branch/develop?svg=true)](https://ci.appveyor.com/project/ZooPin/ck-controlchannel-tcp/branch/develop) |
 
 ## Contributing
