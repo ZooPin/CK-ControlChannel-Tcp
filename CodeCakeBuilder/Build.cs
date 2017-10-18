@@ -100,7 +100,6 @@ namespace CodeCake
 
             Task( "Clean" )
                 .IsDependentOn( "Check-Repository" )
-                .IsDependentOn( "Unit-Testing" )
                 .Does( () =>
                  {
                      Cake.CleanDirectories( projects.Select( p => p.Path.GetDirectory().Combine( "bin" ) ) );
