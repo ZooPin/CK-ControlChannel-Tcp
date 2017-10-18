@@ -185,7 +185,7 @@ namespace CK.ControlChannel.Tcp.Tests
                 {
                     await client.SendAsync( "test", new byte[] { 0x00 } );
 
-                    ev.WaitOne( 1000 );
+                    ev.WaitOne( 2500 );
                     complete.Should().Be( true );
                 }
             }
