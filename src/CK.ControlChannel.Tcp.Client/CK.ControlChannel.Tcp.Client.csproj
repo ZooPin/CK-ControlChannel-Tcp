@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="8.0.0" />
+    <PackageReference Include="CK.ActivityMonitor.SimpleSender" Version="9.0.0" />
     <PackageReference Include="CK.ControlChannel.Abstractions" Version="0.0.0-a01-00-develop-0005" />
     <PackageReference Include="System.Net.Security" Version="4.3.2" />
   </ItemGroup>

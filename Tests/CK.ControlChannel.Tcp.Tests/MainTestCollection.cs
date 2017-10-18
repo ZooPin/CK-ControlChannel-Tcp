@@ -1,10 +1,9 @@
-﻿using CK.Core;
+using CK.Core;
 using CK.Monitoring;
 using CK.Monitoring.Handlers;
 using System;
 using System.IO;
 using System.Reflection;
-using System.Text;
 using Xunit;
 
 namespace CK.ControlChannel.Tcp.Tests
@@ -26,8 +25,7 @@ namespace CK.ControlChannel.Tcp.Tests
 
         private void SetupActivityMonitor()
         {
-            Console.OutputEncoding = Encoding.UTF8;
-            SystemActivityMonitor.RootLogPath = GetTestLogDirectory();
+            LogFile.RootLogPath = GetTestLogDirectory();
             ActivityMonitor.DefaultFilter = LogFilter.Debug;
             ActivityMonitor.AutoConfiguration += ( monitor ) =>
             {

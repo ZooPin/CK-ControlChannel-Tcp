@@ -15,9 +15,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CK.Monitoring" Version="7.0.0" />
+    <PackageReference Include="CK.Monitoring" Version="8.2.0" />
     <PackageReference Include="FluentAssertions" Version="5.0.0-beta0003" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0-preview-20171009-10" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0-preview-20171012-09" />
     <PackageReference Include="xunit" Version="2.3.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.3.0" />
   </ItemGroup>
